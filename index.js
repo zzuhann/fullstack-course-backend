@@ -38,6 +38,30 @@ app.get("/api/persons/:id", (req, res) => {
   }
 });
 
+app.use(express.json());
+
+app.post("/api/persons", (req, res) => {
+  const body = req.body;
+  if (!body.name || !body.number) {
+    res.status(400).json({
+      error: "data is not completed",
+    });
+  }
+  const isExisted = persons.find((p) => p.name === body.name);
+  if (isExisted) {
+    res.status(400).json({
+      error: "name must be unique",
+    });
+  }
+  const person = {
+    id: Math.floor(Math.random() * 500) + 1,
+    name: body.name,
+    number: body.number,
+  };
+  persons.concat(person);
+  res.json(person);
+});
+
 app.delete("/api/persons/:id", (req, res) => {
   const id = req.params.id;
   persons.filter((p) => p.id !== id);
