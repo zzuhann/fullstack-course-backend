@@ -25,7 +25,15 @@ const persons = [
 ];
 
 app.get("/api/persons", (req, res) => {
-  return res.json(persons);
+  res.json(persons);
+});
+
+app.get("/info", (req, res) => {
+  res.send(
+    `<p>Phone book has info for ${
+      persons.length
+    } people</p><p>${new Date().toUTCString()}</p>`
+  );
 });
 
 const PORT = 3001;
