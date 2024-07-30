@@ -38,6 +38,12 @@ app.get("/api/persons/:id", (req, res) => {
   }
 });
 
+app.delete("/api/persons/:id", (req, res) => {
+  const id = req.params.id;
+  persons.filter((p) => p.id !== id);
+  res.status(204).end();
+});
+
 app.get("/info", (req, res) => {
   res.send(
     `<p>Phone book has info for ${
