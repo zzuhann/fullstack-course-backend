@@ -1,5 +1,20 @@
 const express = require("express");
+const morgan = require("morgan");
+const fs = require("fs");
+const path = require("path");
+
 const app = express();
+
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, "access.log"),
+  { flags: "a" }
+);
+
+app.use(express.json()); // <==== parse request body as JSON
+morgan.token("body", (req) => {
+  return JSON.stringify(req.body);
+});
+app.use(morgan(":method :url :status :response-time :body"));
 
 const persons = [
   {
@@ -37,8 +52,6 @@ app.get("/api/persons/:id", (req, res) => {
     res.status(404).end();
   }
 });
-
-app.use(express.json());
 
 app.post("/api/persons", (req, res) => {
   const body = req.body;
