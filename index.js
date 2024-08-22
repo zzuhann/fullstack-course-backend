@@ -1,9 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
-
+const Person = require("./models/person");
 const app = express();
 
+app.use(express.static("dist"));
 app.use(cors()); // 全開
 
 app.use(express.json()); // <==== parse request body as JSON
@@ -36,17 +38,23 @@ const persons = [
 ];
 
 app.get("/api/persons", (req, res) => {
-  res.json(persons);
+  Person.find({}).then((persons) => {
+    res.json(persons);
+  });
 });
 
 app.get("/api/persons/:id", (req, res) => {
   const id = req.params.id;
-  const person = persons.find((p) => p.id === id);
-  if (person) {
-    res.json(person);
-  } else {
-    res.status(404).end();
-  }
+  Person.findById(req.params.id)
+    .then((person) => {
+      res.json(person);
+      if (person) {
+        res.json(person);
+      } else {
+        res.status(404).end();
+      }
+    })
+    .catch((error) => next(error));
 });
 
 app.post("/api/persons", (req, res) => {
@@ -56,36 +64,65 @@ app.post("/api/persons", (req, res) => {
       error: "data is not completed",
     });
   }
-  const isExisted = persons.find((p) => p.name === body.name);
-  if (isExisted) {
-    res.status(400).json({
-      error: "name must be unique",
+
+  Person.findOne({ name: body.name })
+    .then((existingPerson) => {
+      if (existingPerson) {
+        Person.findOneAndUpdate(
+          { name: body.name },
+          { number: body.number },
+          { new: true }
+        ).then((updatedPerson) => {
+          res.json(updatedPerson);
+        });
+      } else {
+        const person = new Person({
+          name: body.name,
+          number: body.number,
+        });
+
+        person.save().then((savedPerson) => {
+          res.json(savedPerson);
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({ error: "something went wrong" });
     });
-  }
-  const person = {
-    id: Math.floor(Math.random() * 500) + 1,
-    name: body.name,
-    number: body.number,
-  };
-  persons.concat(person);
-  res.json(person);
 });
 
 app.delete("/api/persons/:id", (req, res) => {
   const id = req.params.id;
-  persons.filter((p) => p.id !== id);
-  res.status(204).end();
+  Person.findByIdAndDelete(id)
+    .then((result) => {
+      res.status(204).end();
+    })
+    .catch((error) => next(error));
 });
 
 app.get("/info", (req, res) => {
-  res.send(
-    `<p>Phone book has info for ${
-      persons.length
-    } people</p><p>${new Date().toUTCString()}</p>`
-  );
+  Person.find({}).then((persons) => {
+    res.send(
+      `<p>Phone book has info for ${
+        persons.length
+      } people</p><p>${new Date().toUTCString()}</p>`
+    );
+  });
 });
 
-const PORT = process.env.PORT || 3001;
+const errorHandler = (err, req, res, next) => {
+  console.error(err.message);
+
+  if (err.name === "CastError") {
+    return res.status(400).send({ error: "malformatted id" });
+  }
+
+  next(err);
+};
+
+app.use(errorHandler);
+
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
